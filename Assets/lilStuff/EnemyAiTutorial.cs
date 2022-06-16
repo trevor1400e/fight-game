@@ -173,6 +173,8 @@ public class EnemyAiTutorial : MonoBehaviour
     }
     private void DestroyEnemy()
     {
+        //change this later pls srry
+        // ES3.Save("level", 2);
         Destroy(gameObject);
     }
     

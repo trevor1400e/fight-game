@@ -23,8 +23,8 @@ public class ShopPopup : MonoBehaviour
         
         if(collision.gameObject.tag == "Player")
         {
-                Debug.Log("popup shoppp");
-                if (_menu1 != null)
+            
+            if (_menu1 != null)
                 {
                     _menu1.SetActive(true);
                 }

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class pausescene : MonoBehaviour
 {
@@ -26,4 +27,8 @@ public class pausescene : MonoBehaviour
     {
         Time.timeScale = 1;
     }
+    
+    public void Scene1() {  
+        SceneManager.LoadScene("ArenaScene");  
+    } 
 }
