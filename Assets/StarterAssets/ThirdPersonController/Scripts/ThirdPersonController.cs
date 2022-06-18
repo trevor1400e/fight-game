@@ -95,6 +95,7 @@ namespace StarterAssets
 
         // timeout deltatime
         private float _jumpTimeoutDelta;
+        [SerializeField]
         private float _attackTimeoutDelta;
         private float _fallTimeoutDelta;
 
@@ -326,6 +327,7 @@ namespace StarterAssets
                 }
                 
                 if (_input.attack && _attackTimeoutDelta <= 0.0f)
+                // if (_input.attack)
                 {
 
                     // update animator if using character
@@ -333,7 +335,7 @@ namespace StarterAssets
                     {
                         _animator.SetBool(_animIDAttack, true);
                         weaponScript.attacking = true;
-                        // reset the jump timeout timer
+                        // reset the attack timeout timer
                         _attackTimeoutDelta = AttackTimeout;
                     }
                 }
@@ -343,6 +345,7 @@ namespace StarterAssets
                     if (_hasAnimator)
                     {
                         _animator.SetBool(_animIDAttack, false);
+                        _input.attack = false;
                     }
                 }
 
@@ -355,11 +358,9 @@ namespace StarterAssets
                 if (_attackTimeoutDelta >= 0.0f)
                 {
                     _attackTimeoutDelta -= Time.deltaTime;
-                }
-                else
+                } else
                 {
                     weaponScript.attacking = false;
-                    weaponScript.justAttacked = false;
                 }
             }
             else

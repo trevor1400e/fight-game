@@ -9,14 +9,15 @@ public class SwordCollision : MonoBehaviour
 
     [SerializeField] private GameObject _blood;
     private static readonly int Attack = Animator.StringToHash("Attack");
-
+    private static readonly int Invulnerable = Animator.StringToHash("Invulnerable");
+    
+    // [SerializeField]
+    // private float _swordForce = 100f;
     void Start()
     {
         attacking = false;
-        justAttacked = false;
     }
 
-    // Update is called once per frame
     void Update()
     {
     }
@@ -25,20 +26,25 @@ public class SwordCollision : MonoBehaviour
     {
         if (collision.gameObject.tag == "Enemy")
         {
+            EnemyAiTutorial enemyAI = collision.GetComponent<EnemyAiTutorial>();
             //maybe an arraylist of enemies we've hit per swing? or make enemies invulnerable after hit animation triggered?
             //or set animation event at end and detect that
-            if (attacking && justAttacked == false)
+            
+            if (attacking && enemyAI.invulnerable == false)
             {
                 //hit animation
                 collision.GetComponent<Animator>().SetTrigger("Hit");
-                collision.GetComponent<Animator>().SetBool(Attack, false);
+
+                // collision.GetComponent<Rigidbody>().AddForce(-transform.forward * _swordForce, ForceMode.Impulse);
+                
+                //maybe set timeout here too per different weapon stun time
+                collision.GetComponent<EnemyAiTutorial>().invulnerable = true;
 
                 Debug.Log("hit enemy wHILE ATTACKING");
                 GameObject go = Instantiate(_blood, collision.gameObject.GetComponent<Transform>().position,
                     Quaternion.identity);
                 Destroy(go, 1);
                 collision.gameObject.GetComponent<EnemyAiTutorial>().TakeDamage(25);
-                justAttacked = true;
             }
         }
     }

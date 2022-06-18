@@ -1,5 +1,4 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.AI;
 
 public class EnemyAiTutorial : MonoBehaviour
@@ -11,43 +10,42 @@ public class EnemyAiTutorial : MonoBehaviour
     public LayerMask whatIsGround, whatIsPlayer;
 
     public float health;
-    
+
     [Header("Player Grounded")]
     [Tooltip("If the character is grounded or not. Not part of the CharacterController built in grounded check")]
     public bool Grounded = true;
 
-    [Tooltip("Useful for rough ground")]
-    public float GroundedOffset = -0.14f;
+    [Tooltip("Useful for rough ground")] public float GroundedOffset = -0.14f;
 
     [Tooltip("The radius of the grounded check. Should match the radius of the CharacterController")]
     public float GroundedRadius = 0.28f;
 
     [Tooltip("What layers the character uses as ground")]
     public LayerMask GroundLayers;
-    
+
     private bool _hasAnimator;
     private Animator _animator;
-    
+
     // animation IDs
     private int _animIDSpeed;
     private int _animIDGrounded;
-    private int _animIDJump;
     private int _animIDAttack;
-    private int _animIDFreeFall;
     private int _animIDMotionSpeed;
-    
+
     // a.i player
     private float _speed;
+    private float _speedcooldown = 2f;
     private float _animationBlend;
-    private float _targetRotation = 0.0f;
-    private float _rotationVelocity;
-    private float _verticalVelocity;
-    private float _terminalVelocity = 53.0f;
+    // private float _targetRotation = 0.0f;
+    // private float _rotationVelocity;
+    // private float _verticalVelocity;
+    // private float _terminalVelocity = 53.0f;
+
+
     [Tooltip("Acceleration and deceleration")]
     public float SpeedChangeRate = 10.0f;
-    
-    [Header("ai Player")]
-    [Tooltip("Move speed of the character in m/s")]
+
+    [Header("ai Player")] [Tooltip("Move speed of the character in m/s")]
     public float MoveSpeed = 2.0f;
 
     //Patroling
@@ -57,8 +55,13 @@ public class EnemyAiTutorial : MonoBehaviour
 
     //Attacking
     public float timeBetweenAttacks;
-    bool alreadyAttacked;
+    public bool alreadyAttacked;
+    //I know.. but its a mobile game so who cares if its hacked too lazy to write wrapper
+    public bool invulnerable = false;
+    public float iframedefault = 0.5f;
+    private float _iframetimeout;
     public GameObject projectile;
+    public GameObject ragdoll;
 
     //States
     public float sightRange, attackRange;
@@ -72,6 +75,7 @@ public class EnemyAiTutorial : MonoBehaviour
 
     private void Start()
     {
+        _iframetimeout = iframedefault;
         _hasAnimator = TryGetComponent(out _animator);
         AssignAnimationIDs();
     }
@@ -81,16 +85,16 @@ public class EnemyAiTutorial : MonoBehaviour
         //Check for sight and attack range
         playerInSightRange = Physics.CheckSphere(transform.position, sightRange, whatIsPlayer);
         playerInAttackRange = Physics.CheckSphere(transform.position, attackRange, whatIsPlayer);
-        
+
         _hasAnimator = TryGetComponent(out _animator);
-        
+
         GroundedCheck();
+
+        if (invulnerable) CountDownIframe();
 
         if (!playerInSightRange && !playerInAttackRange) Patroling();
         if (playerInSightRange && !playerInAttackRange) ChasePlayer();
         if (playerInAttackRange && playerInSightRange) AttackPlayer();
-        
-
     }
 
     private void Patroling()
@@ -105,9 +109,10 @@ public class EnemyAiTutorial : MonoBehaviour
         //Walkpoint reached
         if (distanceToWalkPoint.magnitude < 1f)
             walkPointSet = false;
-        
+
         Move();
     }
+
     private void SearchWalkPoint()
     {
         //Calculate random point in range
@@ -124,8 +129,8 @@ public class EnemyAiTutorial : MonoBehaviour
     {
         agent.SetDestination(player.position);
 
-        walkPoint = walkPoint = new Vector3(player.position.x, transform.position.y, player.position.z);
-        
+        walkPoint = new Vector3(player.position.x, transform.position.y, player.position.z);
+
         LookPlayerLocked();
 
         Move();
@@ -133,34 +138,46 @@ public class EnemyAiTutorial : MonoBehaviour
 
     private void AttackPlayer()
     {
+        
         //Make sure enemy doesn't move
         agent.SetDestination(transform.position);
 
         LookPlayerLocked();
 
+        if (_speedcooldown > 0.0f)
+        {
+            _speedcooldown -= Time.deltaTime * 3;
+        }
+        
+        _animator.SetFloat(_animIDSpeed, _speedcooldown);
+        
         if (!alreadyAttacked)
         {
             ///Attack code here
             // Rigidbody rb = Instantiate(projectile, transform.position, Quaternion.identity).GetComponent<Rigidbody>();
             // rb.AddForce(transform.forward * 32f, ForceMode.Impulse);
             // rb.AddForce(transform.up * 8f, ForceMode.Impulse);
-            
+
             // update animator if using character
             if (_hasAnimator)
             {
                 _animator.SetBool(_animIDAttack, true);
             }
-            
+
             ///End of attack code
             alreadyAttacked = true;
+            agent.velocity = Vector3.zero;
+            
             Invoke(nameof(ResetAttack), timeBetweenAttacks);
         }
+        
     }
+
     private void ResetAttack()
     {
         alreadyAttacked = false;
         if (_hasAnimator)
-        { 
+        {
             _animator.SetBool(_animIDAttack, false);
         }
     }
@@ -169,15 +186,48 @@ public class EnemyAiTutorial : MonoBehaviour
     {
         health -= damage;
 
-        if (health <= 0) Invoke(nameof(DestroyEnemy), 0.5f);
+        if (health <= 0) Invoke(nameof(DestroyEnemy), 0f);
     }
+    
+    public void CountDownIframe()
+    {
+        if (_iframetimeout >= 0.0f)
+        {
+            _iframetimeout -= Time.deltaTime;
+        }
+        else
+        {
+            invulnerable = false;
+            _iframetimeout = iframedefault;
+        }
+    }
+
     private void DestroyEnemy()
     {
         //change this later pls srry
         // ES3.Save("level", 2);
         Destroy(gameObject);
+        CopyTransformsRecurse(transform, ragdoll.transform);
+        GameObject newRagdoll;
+        newRagdoll = Instantiate(ragdoll, transform.position, transform.rotation);
+        newRagdoll.GetComponentInChildren<Rigidbody>().AddForce(-transform.forward * 7000f);
+        Destroy(newRagdoll, 5);
     }
-    
+
+    private void CopyTransformsRecurse (Transform src,  Transform dst) {
+        dst.position = src.position;
+        dst.rotation = src.rotation;
+   
+        foreach (Transform child in dst) {
+            // Match the transform with the same name
+            var curSrc = src.Find(child.name);
+            if (curSrc)
+                CopyTransformsRecurse(curSrc, child);
+        }
+ 
+   
+    }
+
     private void LookPlayerLocked()
     {
         Vector3 dir = player.position - transform.position;
@@ -196,21 +246,21 @@ public class EnemyAiTutorial : MonoBehaviour
             transform.position.z);
         Gizmos.DrawWireSphere(spherePosition, GroundedRadius);
         Gizmos.DrawWireSphere(walkPoint, GroundedRadius);
-        
-        Gizmos.color = Color.green;
-        Gizmos.DrawRay(transform.position, agent.destination);
+
+        // Gizmos.color = Color.green;
+        // Gizmos.DrawRay(transform.position, agent.destination);
     }
-    
+
     private void AssignAnimationIDs()
     {
         _animIDSpeed = Animator.StringToHash("Speed");
         _animIDGrounded = Animator.StringToHash("Grounded");
-        _animIDJump = Animator.StringToHash("Jump");
+        // _animIDJump = Animator.StringToHash("Jump");
         _animIDAttack = Animator.StringToHash("Attack");
-        _animIDFreeFall = Animator.StringToHash("FreeFall");
+        // _animIDFreeFall = Animator.StringToHash("FreeFall");
         _animIDMotionSpeed = Animator.StringToHash("MotionSpeed");
     }
-    
+
     private void GroundedCheck()
     {
         // set sphere position, with offset
@@ -218,42 +268,43 @@ public class EnemyAiTutorial : MonoBehaviour
             transform.position.z);
         Grounded = Physics.CheckSphere(spherePosition, GroundedRadius, GroundLayers,
             QueryTriggerInteraction.Ignore);
-    
+
         // update animator if using character
         if (_hasAnimator)
         {
             _animator.SetBool(_animIDGrounded, Grounded);
         }
     }
-    
-            private void Move()
+
+    private void Move()
+    {
+        // set target speed based on move speed, sprint speed and if sprint is pressed
+        float targetSpeed = MoveSpeed;
+
+        _speedcooldown = 2f;
+
+        _animationBlend = Mathf.Lerp(_animationBlend, targetSpeed, Time.deltaTime * SpeedChangeRate);
+        if (_animationBlend < 0.01f) _animationBlend = 0f;
+
+
+        // update animator if using character
+        if (_hasAnimator)
         {
-            // set target speed based on move speed, sprint speed and if sprint is pressed
-            float targetSpeed = MoveSpeed;
-            
-            _animationBlend = Mathf.Lerp(_animationBlend, targetSpeed, Time.deltaTime * SpeedChangeRate);
-            if (_animationBlend < 0.01f) _animationBlend = 0f;
-            
-    
-            // update animator if using character
-            if (_hasAnimator)
-            {
-                _animator.SetFloat(_animIDSpeed, _animationBlend);
-                _animator.SetFloat(_animIDMotionSpeed, 1.0f);
-            }
+            _animator.SetFloat(_animIDSpeed, _animationBlend);
+            _animator.SetFloat(_animIDMotionSpeed, 1.0f);
         }
-            
-            private void OnFootstep(AnimationEvent animationEvent)
-            {
-                if (animationEvent.animatorClipInfo.weight > 0.5f)
-                {
-                    // if (FootstepAudioClips.Length > 0)
-                    // {
-                    //     var index = Random.Range(0, FootstepAudioClips.Length);
-                    //     AudioSource.PlayClipAtPoint(FootstepAudioClips[index], transform.TransformPoint(_controller.center), FootstepAudioVolume);
-                    // }
-                }
-            }     
-    
+    }
+
+    private void OnFootstep(AnimationEvent animationEvent)
+    {
+        if (animationEvent.animatorClipInfo.weight > 0.5f)
+        {
+            // if (FootstepAudioClips.Length > 0)
+            // {
+            //     var index = Random.Range(0, FootstepAudioClips.Length);
+            //     AudioSource.PlayClipAtPoint(FootstepAudioClips[index], transform.TransformPoint(_controller.center), FootstepAudioVolume);
+            // }
+        }
+    }
     
 }
