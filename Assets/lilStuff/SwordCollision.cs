@@ -38,13 +38,12 @@ public class SwordCollision : MonoBehaviour
                 // collision.GetComponent<Rigidbody>().AddForce(-transform.forward * _swordForce, ForceMode.Impulse);
                 
                 //maybe set timeout here too per different weapon stun time
-                collision.GetComponent<EnemyAiTutorial>().invulnerable = true;
+                enemyAI.invulnerable = true;
 
-                Debug.Log("hit enemy wHILE ATTACKING");
                 GameObject go = Instantiate(_blood, collision.gameObject.GetComponent<Transform>().position,
                     Quaternion.identity);
                 Destroy(go, 1);
-                collision.gameObject.GetComponent<EnemyAiTutorial>().TakeDamage(25);
+                enemyAI.TakeDamage(25);
             }
         }
     }

@@ -53,6 +53,12 @@ public class EnemyAiTutorial : MonoBehaviour
     bool walkPointSet;
     public float walkPointRange;
 
+    [Header("Weapon")]
+    [Tooltip("Weapon Script")]
+    public EnemySwordCollision enemyWeaponScript;
+    [Tooltip("Time required to pass before being able to attack again. Set to 0f to instantly attack again")]
+    public float AttackTimeout = 0.50f;
+    
     //Attacking
     public float timeBetweenAttacks;
     public bool alreadyAttacked;
@@ -77,6 +83,7 @@ public class EnemyAiTutorial : MonoBehaviour
     {
         _iframetimeout = iframedefault;
         _hasAnimator = TryGetComponent(out _animator);
+        enemyWeaponScript = GetComponentInChildren<EnemySwordCollision>();
         AssignAnimationIDs();
     }
 
@@ -162,12 +169,12 @@ public class EnemyAiTutorial : MonoBehaviour
             if (_hasAnimator)
             {
                 _animator.SetBool(_animIDAttack, true);
+                enemyWeaponScript.attacking = true;
             }
 
             ///End of attack code
             alreadyAttacked = true;
-            agent.velocity = Vector3.zero;
-            
+
             Invoke(nameof(ResetAttack), timeBetweenAttacks);
         }
         
@@ -176,6 +183,8 @@ public class EnemyAiTutorial : MonoBehaviour
     private void ResetAttack()
     {
         alreadyAttacked = false;
+        enemyWeaponScript.attacking = false;
+        enemyWeaponScript.justAttacked = false;
         if (_hasAnimator)
         {
             _animator.SetBool(_animIDAttack, false);

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Cinemachine;
+using UnityEngine;
 #if ENABLE_INPUT_SYSTEM && STARTER_ASSETS_PACKAGES_CHECKED
 using UnityEngine.InputSystem;
 #endif
@@ -20,6 +21,8 @@ namespace StarterAssets
 
         [Tooltip("Sprint speed of the character in m/s")]
         public float SprintSpeed = 5.335f;
+        
+        public float health = 100;
 
         [Tooltip("How fast the character turns to face movement direction")]
         [Range(0.0f, 0.3f)]
@@ -80,10 +83,15 @@ namespace StarterAssets
         public SwordCollision weaponScript;
         [Tooltip("Time required to pass before being able to attack again. Set to 0f to instantly attack again")]
         public float AttackTimeout = 0.50f;
+        public GameObject ragdoll;
+        public GameObject camerafollow;
+
 
         // cinemachine
         private float _cinemachineTargetYaw;
         private float _cinemachineTargetPitch;
+        
+        
 
         // player
         private float _speed;
@@ -146,7 +154,7 @@ namespace StarterAssets
             _cinemachineTargetYaw = CinemachineCameraTarget.transform.rotation.eulerAngles.y;
 
             weaponScript = GetComponentInChildren<SwordCollision>();
-            
+
             _hasAnimator = TryGetComponent(out _animator);
             _controller = GetComponent<CharacterController>();
             _input = GetComponent<StarterAssetsInputs>();
@@ -201,6 +209,44 @@ namespace StarterAssets
             {
                 _animator.SetBool(_animIDGrounded, Grounded);
             }
+        }
+        
+        public void TakeDamage(int damage)
+        {
+            health -= damage;
+
+            if (health <= 0) Invoke(nameof(DestroyPlayer), 0f);
+        }
+        
+        private void DestroyPlayer()
+        {
+            //change this later pls srry
+            // ES3.Save("level", 2);
+            Destroy(gameObject);
+            
+            //GAME OVER HERE
+            
+            CopyTransformsRecurse(transform, ragdoll.transform);
+            GameObject newRagdoll;
+            newRagdoll = Instantiate(ragdoll, transform.position, transform.rotation);
+            newRagdoll.GetComponentInChildren<Rigidbody>().AddForce(-transform.forward * 70f);
+            camerafollow.GetComponent<CinemachineVirtualCamera>().Follow =
+                newRagdoll.transform.Find("PlayerCameraRoot");
+            // Destroy(newRagdoll, 5);
+        }
+        
+        private void CopyTransformsRecurse (Transform src,  Transform dst) {
+            dst.position = src.position;
+            dst.rotation = src.rotation;
+   
+            foreach (Transform child in dst) {
+                // Match the transform with the same name
+                var curSrc = src.Find(child.name);
+                if (curSrc)
+                    CopyTransformsRecurse(curSrc, child);
+            }
+ 
+   
         }
         
 
