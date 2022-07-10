@@ -31,9 +31,12 @@ public class ArenaLevelManager : MonoBehaviour
 
     void EnemyArray()
     {
-        if (level == 1 || level == 2)
+        if (level == 1)
         {
             string[] newEnemies = {"sol", "sol", "sol", "sol", "sol", "sol", "sol", "sol", "sol","sol", "sol", "sol", "sol", "sol", "sol", "sol", "sol", "sol"};
+            enemies = newEnemies;
+        }else{
+            string[] newEnemies = {"sol"};
             enemies = newEnemies;
         }
 

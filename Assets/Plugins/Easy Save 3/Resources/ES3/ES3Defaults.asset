@@ -29,14 +29,18 @@ MonoBehaviour:
     referenceMode: 2
     serializationDepthLimit: 64
     assemblyNames:
+    - MeshBakerCore
     - Assembly-CSharp-firstpass
     - Boxophobic.PolyverseSkies.Runtime
     - Cinemachine
     - Assembly-CSharp
     - Boxophobic.Utils.Scripts
     - Boxophobic.PolyverseSkies.Scripts
+    - MeshBakerEditor
     - Boxophobic.Utils.Editor
     - Boxophobic.PolyverseSkies.Editor
+    - UMotionSourceEditor
+    - UMotionSourceApplication
     showAdvancedSettings: 0
   addMgrToSceneAutomatically: 0
   autoUpdateReferences: 1
