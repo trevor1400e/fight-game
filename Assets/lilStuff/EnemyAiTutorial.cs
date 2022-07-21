@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.AI;
 
 public class EnemyAiTutorial : MonoBehaviour
@@ -6,10 +8,14 @@ public class EnemyAiTutorial : MonoBehaviour
     public NavMeshAgent agent;
 
     public Transform player;
+    private Coroutine LookCoroutine;
+
 
     public LayerMask whatIsGround, whatIsPlayer;
 
     public float health;
+    
+    public float lookSpeed = 3f;
 
     [Header("Player Grounded")]
     [Tooltip("If the character is grounded or not. Not part of the CharacterController built in grounded check")]
@@ -30,10 +36,12 @@ public class EnemyAiTutorial : MonoBehaviour
     private int _animIDSpeed;
     private int _animIDGrounded;
     private int _animIDAttack;
+    private int _animIDAttackType;
     private int _animIDMotionSpeed;
 
     // a.i player
     private float _speed;
+    [SerializeField]
     private float _speedcooldown = 2f;
     private float _animationBlend;
     // private float _targetRotation = 0.0f;
@@ -56,12 +64,15 @@ public class EnemyAiTutorial : MonoBehaviour
     [Header("Weapon")]
     [Tooltip("Weapon Script")]
     public EnemySwordCollision enemyWeaponScript;
+    [Tooltip("Level Script")]
+    public ArenaLevelManager LevelManager;
     [Tooltip("Time required to pass before being able to attack again. Set to 0f to instantly attack again")]
     public float AttackTimeout = 0.50f;
     
     //Attacking
     public float timeBetweenAttacks;
     public bool alreadyAttacked;
+    public bool isRanged;
     //I know.. but its a mobile game so who cares if its hacked too lazy to write wrapper
     public bool invulnerable = false;
     public float iframedefault = 0.5f;
@@ -83,6 +94,7 @@ public class EnemyAiTutorial : MonoBehaviour
     {
         _iframetimeout = iframedefault;
         _hasAnimator = TryGetComponent(out _animator);
+        LevelManager = GameObject.Find("LevelManager").GetComponent<ArenaLevelManager>();
         enemyWeaponScript = GetComponentInChildren<EnemySwordCollision>();
         AssignAnimationIDs();
     }
@@ -100,8 +112,10 @@ public class EnemyAiTutorial : MonoBehaviour
         if (invulnerable) CountDownIframe();
 
         if (!playerInSightRange && !playerInAttackRange) Patroling();
-        if (playerInSightRange && !playerInAttackRange) ChasePlayer();
+        if (playerInSightRange && !playerInAttackRange && alreadyAttacked == false) ChasePlayer();
         if (playerInAttackRange && playerInSightRange) AttackPlayer();
+        
+        if(alreadyAttacked) SlowWalk();
     }
 
     private void Patroling()
@@ -149,25 +163,27 @@ public class EnemyAiTutorial : MonoBehaviour
         //Make sure enemy doesn't move
         agent.SetDestination(transform.position);
 
-        LookPlayerLocked();
+        // LookPlayerLockedHard();
+        
 
-        if (_speedcooldown > 0.0f)
+        if (!alreadyAttacked && _animIDSpeed <= 0.0f)
         {
-            _speedcooldown -= Time.deltaTime * 3;
-        }
-        
-        _animator.SetFloat(_animIDSpeed, _speedcooldown);
-        
-        if (!alreadyAttacked)
-        {
-            ///Attack code here
-            // Rigidbody rb = Instantiate(projectile, transform.position, Quaternion.identity).GetComponent<Rigidbody>();
-            // rb.AddForce(transform.forward * 32f, ForceMode.Impulse);
-            // rb.AddForce(transform.up * 8f, ForceMode.Impulse);
+            LookPlayerLocked();
+            
+            if (isRanged)
+            {
+                ///Attack code here
+                Rigidbody rb = Instantiate(projectile, transform.position, transform.rotation).GetComponent<Rigidbody>();
+                rb.AddForce(transform.forward * 32f, ForceMode.Impulse);
+                rb.AddForce(transform.up * 3f, ForceMode.Impulse);
+            }
 
             // update animator if using character
             if (_hasAnimator)
             {
+                int attackvar = Random.Range(1, 4);
+                
+                _animator.SetInteger(_animIDAttackType, attackvar);
                 _animator.SetBool(_animIDAttack, true);
                 enemyWeaponScript.attacking = true;
             }
@@ -175,11 +191,20 @@ public class EnemyAiTutorial : MonoBehaviour
             ///End of attack code
             alreadyAttacked = true;
 
-            Invoke(nameof(ResetAttack), timeBetweenAttacks);
+            // Invoke(nameof(ResetAttack), timeBetweenAttacks);
         }
         
     }
 
+    private void SlowWalk()
+    {
+        if (_speedcooldown > 0.0f)
+        {
+            _speedcooldown -= Time.deltaTime * 5;
+            _animator.SetFloat(_animIDSpeed, _speedcooldown);
+        }
+    }
+    
     private void ResetAttack()
     {
         alreadyAttacked = false;
@@ -215,6 +240,7 @@ public class EnemyAiTutorial : MonoBehaviour
     {
         //change this later pls srry
         // ES3.Save("level", 2);
+        LevelManager.enemyCount -= 1;
         Destroy(gameObject);
         CopyTransformsRecurse(transform, ragdoll.transform);
         GameObject newRagdoll;
@@ -237,12 +263,50 @@ public class EnemyAiTutorial : MonoBehaviour
    
     }
 
-    private void LookPlayerLocked()
+    private void LookPlayerLockedHard()
     {
         Vector3 dir = player.position - transform.position;
         dir.y = 0;
+        
         transform.rotation = Quaternion.LookRotation(dir);
     }
+    
+    
+    public void LookPlayerLocked()
+    {
+        if (LookCoroutine != null)
+        {
+            StopCoroutine(LookCoroutine);
+        }
+
+        LookCoroutine = StartCoroutine(LookAt());
+    }
+
+    private IEnumerator LookAt()
+    {
+        Vector3 dir = player.position - transform.position;
+        dir.y = 0;
+        
+        Quaternion lookRotation = Quaternion.LookRotation(dir);
+        
+        float time = 0;
+
+        Quaternion initialRotation = transform.rotation;
+
+
+        while (time < 1)
+        {
+            transform.rotation = Quaternion.Slerp(initialRotation, lookRotation, time);
+
+            time += Time.deltaTime * lookSpeed;
+
+            yield return null;
+        }
+    }
+    
+    
+    
+    
 
     private void OnDrawGizmosSelected()
     {
@@ -266,6 +330,7 @@ public class EnemyAiTutorial : MonoBehaviour
         _animIDGrounded = Animator.StringToHash("Grounded");
         // _animIDJump = Animator.StringToHash("Jump");
         _animIDAttack = Animator.StringToHash("Attack");
+        _animIDAttackType = Animator.StringToHash("AttackType");
         // _animIDFreeFall = Animator.StringToHash("FreeFall");
         _animIDMotionSpeed = Animator.StringToHash("MotionSpeed");
     }
@@ -314,6 +379,18 @@ public class EnemyAiTutorial : MonoBehaviour
             //     AudioSource.PlayClipAtPoint(FootstepAudioClips[index], transform.TransformPoint(_controller.center), FootstepAudioVolume);
             // }
         }
+    }
+    
+    //attack stuff
+    private void Turn_On_AttackPoint()
+    {
+        enemyWeaponScript.Set_Collider_Active(); 
+    }
+    
+    private void Turn_Off_AttackPoint()
+    {
+        enemyWeaponScript.Set_Collider_Inactive();
+        ResetAttack();
     }
     
 }

@@ -1,5 +1,7 @@
 ﻿using Cinemachine;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM && STARTER_ASSETS_PACKAGES_CHECKED
 using UnityEngine.InputSystem;
 #endif
@@ -124,7 +126,8 @@ namespace StarterAssets
         private GameObject _mainCamera;
 
         private const float _threshold = 0.01f;
-
+        
+        public TextMeshProUGUI healthText;
         
         private bool _hasAnimator;
 
@@ -171,6 +174,8 @@ namespace StarterAssets
             _jumpTimeoutDelta = JumpTimeout;
             _fallTimeoutDelta = FallTimeout;
             _attackTimeoutDelta = AttackTimeout;
+
+            healthText.SetText(health.ToString());
         }
 
         private void Update()
@@ -216,6 +221,7 @@ namespace StarterAssets
         {
             health -= damage;
 
+            healthText.SetText(health.ToString());
             if (health <= 0) Invoke(nameof(DestroyPlayer), 0f);
         }
         
